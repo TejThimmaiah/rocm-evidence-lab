@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "project": "Bastion Helix \u2014 ROCm Evidence Lab",
+  "created_utc": "2026-11-05T22:40:48.595382+00:00",
+  "environment": {
+    "backend": "cpu",
+    "python": "3.12.14",
+    "numpy": "2.3.5",
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+    "device": "CPU",
+    "dtype": "float32",
+    "gpu_verified": false
+  },
+  "config": {
+    "backend": "cpu",
+    "docs": 4096,
+    "queries": 64,
+    "dim": 384,
+    "batch": 32,
+    "repeats": 15,
+    "warmup": 3,
+    "seed": 42,
+    "k": 10,
+    "output": "rocm-evidence-lab/results"
+  },
+  "dataset_sha256": "3fb27e2201eeaddf08291ba3fdf48e610c1ad54d24bd54cfb4b88a11647c9280",
+  "results": [
+    {
+      "batch": 1,
+      "median_ms": 7.212197000171727,
+      "p95_ms": 8.370541599902026,
+      "queries_per_second": 8873.856329558956,
+      "samples_ms": [
+        6.454356999938682,
+        7.440646000077322,
+        8.209524999983842,
+        6.5071139999872685,
+        7.064317999947889,
+        6.7409810001208825,
+        7.660951999923782,
+        7.5635579999016045,
+        7.212197000171727,
+        8.360097999911886,
+        6.940265999901385,
+        8.394909999879019,
+        6.4968389999648934,
+        7.023890000027677,
+        8.002076999900964
+      ],
+      "max_abs_error": 2.2351741790771484e-07,
+      "recall_at_k": 1.0,
+      "scores_close": true,
+      "accepted": true,
+      "speedup_vs_batch1": 1.0
+    },
+    {
+      "batch": 32,
+      "median_ms": 3.723022000031051,
+      "p95_ms": 4.7188418999212445,
+      "queries_per_second": 17190.336237461455,
+      "samples_ms": [
+        3.2620389999920008,
+        3.1458280000151717,
+        3.2972420001442515,
+        4.053260999853592,
+        2.9727210001055937,
+        3.092618999971819,
+        4.602584999929604,
+        3.7307229999896663,
+        3.612038000028406,
+        4.009506999864243,
+        3.74056800001199,
+        4.990107999901738,
+        3.723022000031051,
+        3.8909009999770205,
+        3.1346509999821137
+      ],
+      "max_abs_error": 0.0,
+      "recall_at_k": 1.0,
+      "scores_close": true,
+      "accepted": true,
+      "speedup_vs_batch1": 1.9371889288087945
+    }
+  ],
+  "recommended_batch": 32,
+  "measurement_scope": "In-memory cosine score matrix computation, concatenation and host dispatch; GPU synchronization included. Excludes embedding, transfer, top-k selection and request queueing.",
+  "limitations": [
+    "Synthetic normalized vectors; no semantic relevance evaluation.",
+    "Batch throughput is not individual online request latency.",
+    "CPU and ROCm use different libraries; compare batching within each backend.",
+    "No energy, cost, end-to-end RAG, or model-quality claim."
+  ]
+}

@@ -1,0 +1,2 @@
+numpy>=1.24,<3
+# Optional GPU dependency: install a matching ROCm PyTorch build via AMD's guide.
