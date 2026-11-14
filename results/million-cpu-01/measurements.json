@@ -1,0 +1,80 @@
+{
+  "schema_version": 2,
+  "project": "Bastion Helix \u2014 ROCm Evidence Lab",
+  "created_utc": "2026-11-14T09:55:59.683476+00:00",
+  "environment": {
+    "backend": "cpu",
+    "python": "3.12.14",
+    "numpy": "2.3.5",
+    "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+    "thread_environment": {
+      "OPENBLAS_NUM_THREADS": "1",
+      "OMP_NUM_THREADS": null,
+      "MKL_NUM_THREADS": null
+    },
+    "device": "CPU",
+    "dtype": "float32",
+    "gpu_verified": false
+  },
+  "memory_plan": {
+    "estimated_host_mib": 2515.50634765625,
+    "estimated_device_mib": 0.0,
+    "corpus_mib": 1464.84375
+  },
+  "config": {
+    "backend": "cpu",
+    "docs": 1000000,
+    "queries": 64,
+    "dim": 384,
+    "batch": 32,
+    "repeats": 3,
+    "warmup": 1,
+    "seed": 42,
+    "k": 10,
+    "memory_budget_mib": 4096,
+    "output": "validation-million-cpu-01/docs-1000000-batch-32"
+  },
+  "dataset_sha256": "4e48b96a67d4dabda4c6366ad21e1566474a111f5fb65ea08d000ad461b6ad79",
+  "results": [
+    {
+      "batch": 1,
+      "median_ms": 8237.66983300004,
+      "p95_ms": 8619.469329700012,
+      "queries_per_second": 7.769187318435185,
+      "samples_ms": [
+        8237.66983300004,
+        7724.183659000005,
+        8661.89149600001
+      ],
+      "max_abs_error": 1.4901161193847656e-07,
+      "recall_at_k": 1.0,
+      "scores_close": true,
+      "accepted": true,
+      "speedup_vs_batch1": 1.0
+    },
+    {
+      "batch": 32,
+      "median_ms": 1834.8977040000136,
+      "p95_ms": 2085.0890792999735,
+      "queries_per_second": 34.87932861896454,
+      "samples_ms": [
+        1720.919082000023,
+        1834.8977040000136,
+        2112.888120999969
+      ],
+      "max_abs_error": 1.564621925354004e-07,
+      "recall_at_k": 1.0,
+      "scores_close": true,
+      "accepted": true,
+      "speedup_vs_batch1": 4.489443643120924
+    }
+  ],
+  "recommended_batch": 32,
+  "measurement_scope": "In-memory cosine score matrix computation, concatenation and host dispatch; GPU synchronization included. Excludes embedding, transfer, top-k selection and request queueing.",
+  "limitations": [
+    "Synthetic normalized vectors; no semantic relevance evaluation.",
+    "Batch throughput is not individual online request latency.",
+    "CPU and ROCm use different libraries; compare batching within each backend.",
+    "No energy, cost, end-to-end RAG, or model-quality claim."
+  ]
+}

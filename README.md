@@ -103,4 +103,8 @@ The default `--memory-budget-mib 4096` applies separately to estimated host and 
 
 Memory estimates include working space and headroom but are not hard limits: library workspaces, allocator caching and other processes can still cause allocation failure. ROCm additionally checks the estimate against currently free GPU memory. Reduce sizes or raise the budget only on adequately provisioned hardware.
 
-Five unit tests pass. Small and medium CPU sweeps passed, the default 16-configuration dry run completed, and an intentionally insufficient budget was rejected and logged. Million-vector execution and AMD GPU execution remain unvalidated. The bundled `results/` still contains the original CPU run; no GPU speedup or CPU/GPU crossover is claimed.
+Five unit tests pass. Small and medium CPU sweeps passed, the default 16-configuration dry run completed, and an intentionally insufficient budget was rejected and logged. A million-vector CPU validation now passes; AMD GPU execution remains unvalidated. The bundled `results/` still contains the original CPU run; no GPU speedup or CPU/GPU crossover is claimed.
+
+## Million-vector CPU validation
+
+[Raw results and reproduction notes](results/million-cpu-01/README.md): 1,000,000 vectors × 384 dimensions, 64 queries, batches 1 and 32. Both passed numerical tolerance and 100% top-10 agreement. Median times were 8,237.670 ms and 1,834.898 ms respectively (4.49× throughput). This hosted-CPU run has only three repetitions and one warmup; it validates execution and correctness, not a stable performance estimate. GPU validation is still pending.

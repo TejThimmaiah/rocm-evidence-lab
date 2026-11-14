@@ -1,0 +1,82 @@
+<!doctype html><html lang='en'><meta charset='utf-8'><meta name='viewport' content='width=device-width,initial-scale=1'><title>ROCm Evidence Lab | Bastion Helix</title><style>
+    :root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#0a101c;color:#edf3fd;font:16px system-ui,sans-serif}main{max-width:1120px;margin:auto;padding:48px 26px}nav{color:#77e5c6;letter-spacing:.15em;font-size:13px}h1{font-size:clamp(36px,6vw,68px);line-height:1.05;max-width:850px;margin:30px 0 18px}p{color:#b8c7dd;line-height:1.7}.badge{display:inline-block;background:#233c43;color:#a4f0d5;padding:9px 13px;border-radius:5px;font-size:12px;margin-top:22px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:30px 0}.card,section{border:1px solid #29374b;border-radius:14px;background:#111c2e;padding:25px}.big{font-size:42px;font-weight:700;margin:12px 0}.muted{font-size:13px;color:#a1b3ca}section{margin:20px 0}h2{font-size:22px;margin-top:0}.barrow{display:flex;align-items:center;gap:16px;margin:25px 0}.barrow span{width:90px}.barrow b{min-width:115px;text-align:right}.track{flex:1;background:#253047;border-radius:6px;overflow:hidden}.track div{height:20px;background:linear-gradient(90deg,#38b9b1,#b7edd1)}table{width:100%;border-collapse:collapse;font-size:14px}th,td{padding:14px 9px;border-bottom:1px solid #29374b;text-align:left}.scroll{overflow:auto}li{color:#b8c7dd;margin:12px 0}code{overflow-wrap:anywhere;color:#a4f0d5}summary{cursor:pointer;padding:10px}pre{white-space:pre-wrap;overflow-wrap:anywhere;color:#b8c7dd}footer{font-size:13px;color:#93a6c2;padding:24px 0}@media(max-width:650px){.grid{grid-template-columns:1fr}.barrow{gap:8px;font-size:12px}main{padding:25px 16px}}
+    </style><main><nav>BASTION HELIX / ENGINEERING EVIDENCE</nav><div class='badge'>MEASURED CPU RUN · AMD GPU VALIDATION PENDING</div><h1>Faster retrieval.<br>Show the evidence.</h1><p>A reproducible experiment in batching cosine similarity workloads.<br>Same vectors. Same precision. Accuracy checked before a recommendation.</p><div class='grid'><div class='card'><div class='muted'>FASTEST ACCEPTED RESULT</div><div class='big'>4.49×</div><div class='muted'>relative to batch 1 on this device</div></div><div class='card'><div class='muted'>RECOMMENDED BATCH</div><div class='big'>32</div><div class='muted'>lowest measured median among passing candidates</div></div><div class='card'><div class='muted'>EXECUTION CPU</div><h2>CPU</h2><div class='muted'>float32 · cpu</div></div></div><section><h2>Measured time to score the query set</h2><p>Lower is better. Raw repetitions are included below.</p><div class='barrow'><span>Batch 1</span><div class='track'><div style='width:100.00%'></div></div><b>8237.670 ms</b></div><div class='barrow'><span>Batch 32</span><div class='track'><div style='width:22.27%'></div></div><b>1834.898 ms</b></div></section><section><h2>Performance with a correctness gate</h2><div class='scroll'><table><thead><tr><th>Batch</th><th>Median ms</th><th>P95 ms</th><th>Queries/s</th><th>Recall@K</th><th>Max error</th><th>Check</th></tr></thead><tbody><tr><td>1</td><td>8237.670</td><td>8619.469</td><td>8</td><td>100.0%</td><td>1.49e-07</td><td>PASS</td></tr><tr><td>32</td><td>1834.898</td><td>2085.089</td><td>35</td><td>100.0%</td><td>1.56e-07</td><td>PASS</td></tr></tbody></table></div></section><section><h2>What this experiment measures</h2><p>In-memory cosine score matrix computation, concatenation and host dispatch; GPU synchronization included. Excludes embedding, transfer, top-k selection and request queueing.</p><ul><li>Synthetic normalized vectors; no semantic relevance evaluation.</li><li>Batch throughput is not individual online request latency.</li><li>CPU and ROCm use different libraries; compare batching within each backend.</li><li>No energy, cost, end-to-end RAG, or model-quality claim.</li></ul><p>Score tolerance: atol 1e-4, rtol 1e-3. Top-k set agreement must be ≥99%. This checks numerical agreement, not semantic relevance.</p></section><section><h2>Reproduce, inspect, challenge</h2><p>Dataset SHA-256</p><code>4e48b96a67d4dabda4c6366ad21e1566474a111f5fb65ea08d000ad461b6ad79</code><details><summary>Environment, configuration and raw measurements</summary><pre>{
+  &quot;schema_version&quot;: 2,
+  &quot;project&quot;: &quot;Bastion Helix \u2014 ROCm Evidence Lab&quot;,
+  &quot;created_utc&quot;: &quot;2026-11-14T09:55:59.683476+00:00&quot;,
+  &quot;environment&quot;: {
+    &quot;backend&quot;: &quot;cpu&quot;,
+    &quot;python&quot;: &quot;3.12.14&quot;,
+    &quot;numpy&quot;: &quot;2.3.5&quot;,
+    &quot;platform&quot;: &quot;Linux-6.18.57-x86_64-with-glibc2.41&quot;,
+    &quot;thread_environment&quot;: {
+      &quot;OPENBLAS_NUM_THREADS&quot;: &quot;1&quot;,
+      &quot;OMP_NUM_THREADS&quot;: null,
+      &quot;MKL_NUM_THREADS&quot;: null
+    },
+    &quot;device&quot;: &quot;CPU&quot;,
+    &quot;dtype&quot;: &quot;float32&quot;,
+    &quot;gpu_verified&quot;: false
+  },
+  &quot;memory_plan&quot;: {
+    &quot;estimated_host_mib&quot;: 2515.50634765625,
+    &quot;estimated_device_mib&quot;: 0.0,
+    &quot;corpus_mib&quot;: 1464.84375
+  },
+  &quot;config&quot;: {
+    &quot;backend&quot;: &quot;cpu&quot;,
+    &quot;docs&quot;: 1000000,
+    &quot;queries&quot;: 64,
+    &quot;dim&quot;: 384,
+    &quot;batch&quot;: 32,
+    &quot;repeats&quot;: 3,
+    &quot;warmup&quot;: 1,
+    &quot;seed&quot;: 42,
+    &quot;k&quot;: 10,
+    &quot;memory_budget_mib&quot;: 4096,
+    &quot;output&quot;: &quot;validation-million-cpu-01/docs-1000000-batch-32&quot;
+  },
+  &quot;dataset_sha256&quot;: &quot;4e48b96a67d4dabda4c6366ad21e1566474a111f5fb65ea08d000ad461b6ad79&quot;,
+  &quot;results&quot;: [
+    {
+      &quot;batch&quot;: 1,
+      &quot;median_ms&quot;: 8237.66983300004,
+      &quot;p95_ms&quot;: 8619.469329700012,
+      &quot;queries_per_second&quot;: 7.769187318435185,
+      &quot;samples_ms&quot;: [
+        8237.66983300004,
+        7724.183659000005,
+        8661.89149600001
+      ],
+      &quot;max_abs_error&quot;: 1.4901161193847656e-07,
+      &quot;recall_at_k&quot;: 1.0,
+      &quot;scores_close&quot;: true,
+      &quot;accepted&quot;: true,
+      &quot;speedup_vs_batch1&quot;: 1.0
+    },
+    {
+      &quot;batch&quot;: 32,
+      &quot;median_ms&quot;: 1834.8977040000136,
+      &quot;p95_ms&quot;: 2085.0890792999735,
+      &quot;queries_per_second&quot;: 34.87932861896454,
+      &quot;samples_ms&quot;: [
+        1720.919082000023,
+        1834.8977040000136,
+        2112.888120999969
+      ],
+      &quot;max_abs_error&quot;: 1.564621925354004e-07,
+      &quot;recall_at_k&quot;: 1.0,
+      &quot;scores_close&quot;: true,
+      &quot;accepted&quot;: true,
+      &quot;speedup_vs_batch1&quot;: 4.489443643120924
+    }
+  ],
+  &quot;recommended_batch&quot;: 32,
+  &quot;measurement_scope&quot;: &quot;In-memory cosine score matrix computation, concatenation and host dispatch; GPU synchronization included. Excludes embedding, transfer, top-k selection and request queueing.&quot;,
+  &quot;limitations&quot;: [
+    &quot;Synthetic normalized vectors; no semantic relevance evaluation.&quot;,
+    &quot;Batch throughput is not individual online request latency.&quot;,
+    &quot;CPU and ROCm use different libraries; compare batching within each backend.&quot;,
+    &quot;No energy, cost, end-to-end RAG, or model-quality claim.&quot;
+  ]
+}</pre></details></section><footer>Independent Bastion Helix project. Not endorsed by AMD. No telemetry, API key or model download required. Generated 2026-11-14T09:55:59.683476+00:00.</footer></main></html>
