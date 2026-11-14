@@ -37,7 +37,7 @@ python evidence_lab.py --backend rocm --docs 4096 --queries 64 --dim 384 --batch
 
 The command refuses to silently fall back to CPU. It requires both a HIP-enabled PyTorch build and an available device. `torch.cuda` is the API name used by ROCm PyTorch too. Device synchronization surrounds wall-clock timing; input transfer and accuracy validation occur outside timed sections.
 
-For larger experiments, increase `--docs` gradually and record every configuration. The tool applies conservative size limits. If memory is exhausted, reduce docs, queries or dimension. Do not change results or mark a failed quality check as passing.
+For larger experiments, increase `--docs` gradually and record every configuration. The tool checks a configurable memory estimate before allocating data. If memory is exhausted, reduce docs, queries or dimension. Do not change results or mark a failed quality check as passing.
 
 ## What is implemented
 
@@ -55,7 +55,7 @@ The experiment scores all queries against all documents in memory. It includes m
 
 Correctness requires `allclose(atol=1e-4, rtol=1e-3)` and mean top-k set agreement ≥99%. Near-ties can change rankings; inspect failures rather than loosening tolerances to create a favorable result. Synthetic random vectors test numerical consistency, not whether search results are meaningful. This is not an end-to-end RAG benchmark or proof that batching always helps. Whole score matrices are materialized, so it is not a billion-document retrieval engine.
 
-Two automated tests exercise corrupted rankings, remainder batches, deterministic datasets, sample counts and invalid k. A complete CPU run also passed. GPU execution remains unverified. Benchmark values are not signed or tamper-proof: dataset hashes support reproduction, not independent attestation.
+Automated tests exercise corrupted rankings, remainder batches, deterministic datasets, sample counts and invalid k. A complete CPU run also passed. GPU execution remains unverified. Benchmark values are not signed or tamper-proof: dataset hashes support reproduction, not independent attestation.
 
 ## Next milestones
 
@@ -80,3 +80,27 @@ An evidence-producing performance companion for developers moving retrieval and 
 - AMD developer showcase: https://devcommunity.amd.com/c/general/showcase/19
 
 Independent Bastion Helix project. AMD and ROCm names identify the target platform only.
+
+## Corpus and batch sweeps
+
+The default sweep covers 4,096, 32,768, 131,072 and 1,000,000 vectors, at batch sizes 1, 8, 32 and 64. Defaults: dimension 384, 64 queries, 30 repetitions and 5 warmups. Every candidate has a batch-1 baseline on the same backend.
+
+```sh
+# Plan without allocating vectors or using a GPU
+python sweep.py --dry-run --output plan-01
+# Run separately on adequately provisioned machines
+OPENBLAS_NUM_THREADS=1 python sweep.py --backend cpu --output sweep-cpu-01
+OPENBLAS_NUM_THREADS=1 python sweep.py --backend rocm --output sweep-rocm-01
+```
+
+On Windows, set the environment variable separately as described above. Customize with `--sizes`, `--batches`, `--queries`, `--dim`, `--repeats`, `--warmup` and `--timeout`. Keep thread settings consistent; results capture the thread environment variables, not a guarantee of actual library thread counts.
+
+Each configuration runs in an isolated process. Its log, JSON and HTML report are retained. Failed runs and timeouts are recorded in `summary.json` and cause a nonzero sweep exit code. Existing output directories are refused so earlier trials are not overwritten.
+
+### Memory and validation limits
+
+The default `--memory-budget-mib 4096` applies separately to estimated host and device memory. A million 384-dimensional float32 vectors alone occupy about 1.43 GiB. Generation uses bounded blocks, hashing avoids corpus-sized byte copies, and correctness validation sorts one query at a time. Full score matrices are still materialized.
+
+Memory estimates include working space and headroom but are not hard limits: library workspaces, allocator caching and other processes can still cause allocation failure. ROCm additionally checks the estimate against currently free GPU memory. Reduce sizes or raise the budget only on adequately provisioned hardware.
+
+Five unit tests pass. Small and medium CPU sweeps passed, the default 16-configuration dry run completed, and an intentionally insufficient budget was rejected and logged. Million-vector execution and AMD GPU execution remain unvalidated. The bundled `results/` still contains the original CPU run; no GPU speedup or CPU/GPU crossover is claimed.

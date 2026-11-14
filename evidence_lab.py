@@ -5,6 +5,7 @@ import hashlib
 import html
 import json
 import platform
+import os
 import statistics
 import time
 from pathlib import Path
@@ -16,10 +17,41 @@ def topk(scores, k):
 
 
 def quality(reference, candidate, k):
-    a, b = topk(reference, k), topk(candidate, k)
-    return {'max_abs_error': float(np.max(np.abs(reference-candidate))),
-            'recall_at_k': float(np.mean([len(set(x)&set(y))/k for x,y in zip(a,b)])),
-            'scores_close': bool(np.allclose(reference,candidate,atol=1e-4,rtol=1e-3))}
+    # Validate one query at a time to bound sorting and comparison scratch space.
+    if reference.shape != candidate.shape or reference.ndim != 2:
+        raise ValueError('Score matrices must have matching two-dimensional shapes')
+    if not 1 <= k <= reference.shape[1]:
+        raise ValueError('k must be between 1 and the document count')
+    error, agreement, close = 0.0, 0.0, True
+    for ref, got in zip(reference, candidate):
+        a, b = topk(ref[None, :], k)[0], topk(got[None, :], k)[0]
+        error = max(error, float(np.max(np.abs(ref-got))))
+        agreement += len(set(a) & set(b)) / k
+        close = close and bool(np.allclose(ref, got, atol=1e-4, rtol=1e-3))
+    return {'max_abs_error': error, 'recall_at_k': agreement / len(reference),
+            'scores_close': close}
+
+
+def memory_plan(args):
+    vectors = 4 * (args.docs + args.queries) * args.dim
+    scores = 4 * args.docs * args.queries
+    # Resident vectors, overlapping score matrices, one-row sort/validation,
+    # bounded float64 generation scratch, and runtime headroom. An estimate,
+    # not a guarantee: BLAS/PyTorch workspace and other processes can vary.
+    host = vectors + 3 * scores + 40 * args.docs + 16 * min(4096, max(args.docs, args.queries)) * args.dim + 256 * 2**20
+    device = vectors + 2 * scores + 256 * 2**20 if args.backend == 'rocm' else 0
+    return {'estimated_host_mib': host / 2**20,
+            'estimated_device_mib': device / 2**20,
+            'corpus_mib': 4 * args.docs * args.dim / 2**20}
+
+
+def normalized_vectors(rng, rows, dim):
+    out = np.empty((rows, dim), dtype='float32')
+    for start in range(0, rows, 4096):
+        block = out[start:start+4096]
+        block[:] = rng.normal(size=block.shape)
+        block /= np.linalg.norm(block, axis=1, keepdims=True)
+    return out
 
 
 def run(args):
@@ -27,18 +59,21 @@ def run(args):
         raise ValueError('All sizes, repeats and k must be positive')
     if args.k > args.docs or args.warmup < 0:
         raise ValueError('k must not exceed docs; warmup must be nonnegative')
-    if args.docs*args.queries > 20_000_000 or args.docs*args.dim > 20_000_000:
-        raise ValueError('Demo size limit exceeded; use smaller dimensions')
+    plan = memory_plan(args)
+    budget = getattr(args, 'memory_budget_mib', 4096)
+    if budget <= 0 or max(plan['estimated_host_mib'], plan['estimated_device_mib']) > budget:
+        raise ValueError(f'Memory estimate exceeds per-memory-space budget {budget} MiB: {plan}')
     rng=np.random.default_rng(args.seed)
-    docs=rng.normal(size=(args.docs,args.dim)).astype('float32')
-    queries=rng.normal(size=(args.queries,args.dim)).astype('float32')
-    docs/=np.linalg.norm(docs,axis=1,keepdims=True)
-    queries/=np.linalg.norm(queries,axis=1,keepdims=True)
-    fingerprint=hashlib.sha256(docs.tobytes()+queries.tobytes()).hexdigest()
+    docs=normalized_vectors(rng, args.docs, args.dim)
+    queries=normalized_vectors(rng, args.queries, args.dim)
+    digest=hashlib.sha256()
+    digest.update(memoryview(docs).cast('B'))
+    digest.update(memoryview(queries).cast('B'))
+    fingerprint=digest.hexdigest()
     reference=queries@docs.T
     sync=lambda:None
     meta={'backend':args.backend,'python':platform.python_version(),'numpy':np.__version__,
-          'platform':platform.platform(),'device':'CPU','dtype':'float32','gpu_verified':False}
+          'platform':platform.platform(),'thread_environment':{key:os.environ.get(key) for key in ('OPENBLAS_NUM_THREADS','OMP_NUM_THREADS','MKL_NUM_THREADS')},'device':'CPU','dtype':'float32','gpu_verified':False}
     torch=None
     if args.backend=='rocm':
         try:
@@ -49,6 +84,9 @@ def run(args):
             raise RuntimeError('ROCm GPU required. No CPU fallback is permitted for --backend rocm.')
         torch.backends.cuda.matmul.allow_tf32=False
         device=torch.device('cuda:0')
+        free_bytes, _ = torch.cuda.mem_get_info(device)
+        if plan['estimated_device_mib'] * 2**20 > free_bytes:
+            raise RuntimeError('Estimated device memory exceeds currently free GPU memory')
         d=torch.from_numpy(docs).to(device)
         q=torch.from_numpy(queries).to(device)
         sync=torch.cuda.synchronize
@@ -79,6 +117,7 @@ def run(args):
     for b in batches:
         out=host(score(b))
         check=quality(reference,out,args.k)
+        del out
         median=statistics.median(samples[b])
         results.append({'batch':b,'median_ms':median,'p95_ms':float(np.percentile(samples[b],95)),
                         'queries_per_second':args.queries*1000/median,'samples_ms':samples[b],
@@ -87,9 +126,9 @@ def run(args):
     for item in results:item['speedup_vs_batch1']=base/item['median_ms']
     eligible=[r for r in results if r['accepted']]
     best=min(eligible,key=lambda x:x['median_ms'])['batch'] if eligible else None
-    return {'schema_version':1,'project':'Bastion Helix — ROCm Evidence Lab',
+    return {'schema_version':2,'project':'Bastion Helix — ROCm Evidence Lab',
             'created_utc':dt.datetime.now(dt.timezone.utc).isoformat(),'environment':meta,
-            'config':vars(args),'dataset_sha256':fingerprint,'results':results,'recommended_batch':best,
+            'memory_plan':plan,'config':vars(args),'dataset_sha256':fingerprint,'results':results,'recommended_batch':best,
             'measurement_scope':'In-memory cosine score matrix computation, concatenation and host dispatch; GPU synchronization included. Excludes embedding, transfer, top-k selection and request queueing.',
             'limitations':['Synthetic normalized vectors; no semantic relevance evaluation.',
                           'Batch throughput is not individual online request latency.',
@@ -120,10 +159,11 @@ def main():
     p.add_argument('--backend',choices=['cpu','rocm'],default='cpu')
     for name,default in [('docs',4096),('queries',64),('dim',384),('batch',32),('repeats',15),('warmup',3),('seed',42),('k',10)]:
         p.add_argument('--'+name,type=int,default=default)
+    p.add_argument('--memory-budget-mib',type=int,default=4096)
     p.add_argument('--output',default='results')
     args=p.parse_args()
     try:data=run(args)
-    except (ValueError,RuntimeError) as exc:p.exit(2,str(exc)+'\n')
+    except (ValueError,RuntimeError,MemoryError) as exc:p.exit(2,str(exc)+'\n')
     dest=Path(args.output); dest.mkdir(parents=True,exist_ok=True)
     (dest/'measurements.json').write_text(json.dumps(data,indent=2))
     report(data,dest/'report.html')
