@@ -6,7 +6,32 @@ A working developer-tool prototype for the cosine-scoring stage of vector retrie
 
 ## Current evidence
 
-The bundled report is a real **CPU-only** run, not a simulation and not an AMD benchmark. Batch 32 measured approximately 1.94× the throughput of batch 1 on this run. Both passed score tolerance and top-k agreement checks. Timings vary by machine and system load. The code has a ROCm execution path, but **that path has not yet been executed or validated on an AMD GPU**. No claim of production readiness, novel algorithm, or AMD endorsement is made.
+**CPU evidence is published. ROCm GPU validation is pending.** Two saved CPU runs demonstrate execution and correctness; neither establishes AMD GPU performance.
+
+![CPU throughput for the million-vector validation run](docs/million-cpu-throughput.svg)
+
+| Million-vector trial | Batch 1 | Batch 32 |
+| --- | ---: | ---: |
+| Median whole-workload time | 8237.670 ms | 1834.898 ms |
+| Throughput | 7.77 queries/s | 34.88 queries/s |
+| Score tolerance | Pass | Pass |
+| Mean top-10 set agreement | 100% | 100% |
+
+The measured batching ratio was **4.49×** in this hosted CPU trial, using just **3 repetitions and 1 warmup**. This is execution validation, not a stable performance estimate. Results vary with hardware, libraries and load; no CPU/GPU crossover has been measured. See [raw samples and environment](results/million-cpu-01/measurements.json) and [trial notes](results/million-cpu-01/README.md).
+
+The [original smaller CPU run](results/measurements.json) measured approximately 1.94× throughput with batch 32. These are different workloads, so do not compare their speedup ratios as a scaling trend. The ROCm code path has **not yet been executed or validated on an AMD GPU**.
+
+### Reproduce the million-vector validation
+
+After installing dependencies below, run from the repository root:
+
+```sh
+OPENBLAS_NUM_THREADS=1 python sweep.py --backend cpu --sizes 1000000 --batches 32 --queries 64 --dim 384 --repeats 3 --warmup 1 --output validation-million-cpu-02
+```
+
+On Windows PowerShell, set `$env:OPENBLAS_NUM_THREADS="1"` first and omit the environment prefix. Use a fresh output directory for each trial. Open `validation-million-cpu-02/docs-1000000-batch-32/report.html`; its neighboring `measurements.json` retains raw timings and correctness checks. This reproduces the configuration, not identical timing. For stronger timing evidence, use `--repeats 30 --warmup 5` and retain multiple independent trials.
+
+The corpus alone needs about 1.43 GiB; the saved run estimated about 2.46 GiB of host memory including working space and headroom. Actual peak memory can differ. The default budget is 4096 MiB; review the memory notes below before running.
 
 ## Quick start (Python 3.10+)
 
@@ -63,7 +88,7 @@ Automated tests exercise corrupted rankings, remainder batches, deterministic da
 2. Sweep at least three query counts and batch sizes. Explain throughput versus waiting-time tradeoffs.
 3. Extend the benchmark to a licensed public document corpus and a fixed open embedding model; report retrieval quality separately from numeric agreement.
 4. Record a 90-second screen demo: environment → run → correctness → report → limitations.
-5. Publish source, setup instructions, hardware/software versions and raw results in a repository you control.
+5. Keep source, setup instructions, hardware/software versions and raw results together as new trials are published.
 6. Update the Showcase discussion with verified AMD results.
 
 Showcase discussion: https://devcommunity.amd.com/t/bastion-helix-rocm-evidence-lab-correctness-first-vector-retrieval-benchmarking/1382
